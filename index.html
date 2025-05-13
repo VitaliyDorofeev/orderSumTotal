@@ -17,11 +17,21 @@
             margin-top: 10px;
             padding: 10px;
             font-size: 16px;
+            cursor: pointer;
         }
-        #result {
+        #result, #removed {
             margin-top: 20px;
             font-size: 18px;
             font-weight: bold;
+        }
+        #newJson {
+            margin-top: 10px;
+            white-space: pre-wrap;
+            background: #f9f9f9;
+            padding: 10px;
+            border: 1px solid #ccc;
+            font-family: monospace;
+            font-size: 14px;
         }
     </style>
 </head>
@@ -33,20 +43,68 @@
                 <textarea id="jsonInput" placeholder="Вставьте JSON здесь..."></textarea>
                 <button onclick="calculateSum()">Посчитать</button>
                 <div id="result"></div>
+                <div id="removed"></div>
+                <h3>Новый JSON без заказов с нулевой суммой:</h3>
+                <button onclick="copyJson()">Скопировать JSON</button>
+                <div id="newJson"></div>
             </div>
         </div>
     </main>
-    
+
     <script>
+        let cleanedJson = ""; // для хранения очищенного JSON
+
         function calculateSum() {
             try {
                 const input = document.getElementById("jsonInput").value;
                 const data = JSON.parse(input);
-                const totalSum = data.actOrders.reduce((sum, order) => sum + order.orderSum, 0);
+
+                const removedOrderCodes = [];
+                const filteredOrders = data.actOrders.filter(order => {
+                    if (order.orderSum === 0) {
+                        removedOrderCodes.push(order.orderCode);
+                        return false;
+                    }
+                    return true;
+                });
+
+                data.actOrders = filteredOrders;
+
+                const totalSum = filteredOrders.reduce((sum, order) => sum + order.orderSum, 0);
+
                 document.getElementById("result").innerText = "Сумма заказов: " + totalSum.toFixed(2);
+
+                if (removedOrderCodes.length > 0) {
+                    document.getElementById("removed").innerText =
+                        "Удалены заказы с нулевой суммой: " + removedOrderCodes.join(", ");
+                } else {
+                    document.getElementById("removed").innerText = "Заказов с нулевой суммой не найдено.";
+                }
+
+                cleanedJson = JSON.stringify(data, null, 2);
+                document.getElementById("newJson").innerText = cleanedJson;
+
             } catch (error) {
                 document.getElementById("result").innerText = "Ошибка: Неверный JSON";
+                document.getElementById("removed").innerText = "";
+                document.getElementById("newJson").innerText = "";
+                cleanedJson = "";
             }
+        }
+
+        function copyJson() {
+            if (!cleanedJson) {
+                alert("Сначала нужно посчитать и получить новый JSON.");
+                return;
+            }
+
+            navigator.clipboard.writeText(cleanedJson)
+                .then(() => {
+                    alert("Очищенный JSON скопирован в буфер обмена!");
+                })
+                .catch(err => {
+                    alert("Ошибка при копировании: " + err);
+                });
         }
     </script>
 </body>
